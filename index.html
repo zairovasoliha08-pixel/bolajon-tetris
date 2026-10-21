@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Bolajon Tetris</title>
+<style>
+*{box-sizing:border-box} body{margin:0;min-height:100vh;font-family:Arial,sans-serif;background:linear-gradient(#79d8ff,#eefcff);color:#17324d;display:flex;justify-content:center}
+.app{width:min(100%,470px);padding:12px;text-align:center}.title{font-size:30px;font-weight:900;margin:4px}.sub{margin:0 0 8px}
+.panel{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}.card{flex:1;background:#fff;border-radius:14px;padding:8px;box-shadow:0 4px 12px #0002;font-weight:bold}
+.wrap{position:relative;display:inline-block;background:#15304b;padding:7px;border-radius:16px;box-shadow:0 8px 20px #0003}
+canvas{display:block;background:#091827;border-radius:10px;max-width:82vw;height:auto}
+.overlay{position:absolute;inset:7px;display:flex;align-items:center;justify-content:center;background:#06111dcc;border-radius:10px;color:#fff;font-size:25px;font-weight:bold;padding:20px}
+.hidden{display:none}.controls{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px auto 8px;max-width:380px}
+button{border:0;border-radius:14px;padding:13px 8px;font-size:22px;font-weight:bold;background:#fff;box-shadow:0 4px 10px #0002;touch-action:manipulation}
+button:active{transform:translateY(2px)}.start{font-size:17px;background:#ffe66d;width:100%;max-width:380px}.hint{font-size:12px;opacity:.75;margin:8px}
+</style>
+</head>
+<body><main class="app">
+<div class="title">🧩 Bolajon Tetris 🎮</div>
+<p class="sub">Bloklarni joylashtir va qatorlarni to‘ldir!</p>
+<div class="panel"><div class="card">⭐ Hisob<br><span id="score">0</span></div><div class="card">🏆 Rekord<br><span id="best">0</span></div><div class="card">⚡ Daraja<br><span id="level">1</span></div></div>
+<div class="wrap"><canvas id="game" width="300" height="600"></canvas><div id="overlay" class="overlay">Boshlash uchun START ni bos 😊</div></div>
+<div class="controls"><button id="left">⬅️</button><button id="rotate">🔄</button><button id="right">➡️</button><button id="down">⬇️</button></div>
+<button class="start" id="start">▶️ START / QAYTA BOSHLASH</button>
+<div class="hint">Kompyuter: ← → ↓, aylantirish: ↑ yoki Space</div>
+</main>
+<script>
+const c=document.getElementById('game'),x=c.getContext('2d'),COLS=10,ROWS=20,S=30;
+const colors=['','#ff5b6e','#45c7ff','#ffd84d','#9b6cff','#55d66b','#ff9f43','#4f7cff'];
+const pieces=[
+[[1,1,1,1]],[[1,0,0],[1,1,1]],[[0,0,1],[1,1,1]],[[1,1],[1,1]],
+[[0,1,1],[1,1,0]],[[0,1,0],[1,1,1]],[[1,1,0],[0,1,1]]
+];
+let board,p,score,level,best=+(localStorage.best||0),drop=0,last=0,running=false;
+bestEl=document.getElementById('best');bestEl.textContent=best;
+function reset(){board=Array.from({length:ROWS},()=>Array(COLS).fill(0));score=0;level=1;spawn();update();running=true;document.getElementById('overlay').classList.add('hidden');last=performance.now();requestAnimationFrame(loop)}
+function spawn(){let n=Math.floor(Math.random()*pieces.length);p={m:pieces[n].map(r=>r.slice()),x:3,y:0,color:n+1};if(collide(0,0,p.m))gameOver()}
+function collide(dx,dy,m=p.m){for(let y=0;y<m.length;y++)for(let z=0;z<m[y].length;z++)if(m[y][z]){let nx=p.x+z+dx,ny=p.y+y+dy;if(nx<0||nx>=COLS||ny>=ROWS||(ny>=0&&board[ny][nx]))return true}return false}
+function merge(){p.m.forEach((r,y)=>r.forEach((v,z)=>{if(v&&p.y+y>=0)board[p.y+y][p.x+z]=p.color}));clearLines();spawn()}
+function clearLines(){let n=0;for(let y=ROWS-1;y>=0;y--){if(board[y].every(Boolean)){board.splice(y,1);board.unshift(Array(COLS).fill(0));n++;y++}}if(n){score += [0,100,300,500,800][n]*level;level=1+Math.floor(score/1000);if(score>best){best=score;localStorage.best=best}update()}}
+function move(dx){if(running&&!collide(dx,0))p.x+=dx}
+function down(){if(!running)return;if(!collide(0,1))p.y++;else merge();drop=0}
+function rotate(){if(!running)return;let m=p.m[0].map((_,i)=>p.m.map(r=>r[i]).reverse());if(!collide(0,0,m))p.m=m}
+function update(){document.getElementById('score').textContent=score;document.getElementById('level').textContent=level;bestEl.textContent=best}
+function gameOver(){running=false;document.getElementById('overlay').innerHTML='O‘yin tugadi!<br>⭐ '+score+' ball';document.getElementById('overlay').classList.remove('hidden')}
+function cell(px,py,col){x.fillStyle=colors[col];x.fillRect(px*S+1,py*S+1,S-2,S-2);x.fillStyle='#ffffff55';x.fillRect(px*S+4,py*S+4,S-8,5)}
+function draw(){x.clearRect(0,0,c.width,c.height);x.strokeStyle='#ffffff10';for(let i=0;i<=COLS;i++){x.beginPath();x.moveTo(i*S,0);x.lineTo(i*S,ROWS*S);x.stroke()}for(let i=0;i<=ROWS;i++){x.beginPath();x.moveTo(0,i*S);x.lineTo(COLS*S,i*S);x.stroke()}board.forEach((r,y)=>r.forEach((v,z)=>v&&cell(z,y,v)));if(p)p.m.forEach((r,y)=>r.forEach((v,z)=>v&&cell(p.x+z,p.y+y,p.color)))}
+function loop(t){if(!running){draw();return}drop+=t-last;last=t;if(drop>Math.max(120,700-(level-1)*60))down();draw();requestAnimationFrame(loop)}
+document.getElementById('start').onclick=reset;
+document.getElementById('left').onclick=()=>move(-1);document.getElementById('right').onclick=()=>move(1);document.getElementById('down').onclick=down;document.getElementById('rotate').onclick=rotate;
+document.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','ArrowDown','ArrowUp',' '].includes(e.key))e.preventDefault();if(e.key==='ArrowLeft')move(-1);if(e.key==='ArrowRight')move(1);if(e.key==='ArrowDown')down();if(e.key==='ArrowUp'||e.key===' ')rotate()});
+board=Array.from({length:ROWS},()=>Array(COLS).fill(0));draw();
+</script></body></html>
