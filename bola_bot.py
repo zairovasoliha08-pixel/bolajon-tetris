@@ -14,7 +14,7 @@ def web_server():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-       InlineKeyboardButton("🎮 O‘yinni ochish", url=GAME_URL)
+       [InlineKeyboardButton("🎮 O‘yinni ochish", url=GAME_URL)]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
